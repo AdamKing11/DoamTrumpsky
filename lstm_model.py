@@ -23,7 +23,8 @@ def read_corpus(infile):
 
 def flatten(l):
     """
-    takes a 2-d
+    takes a 2-d list of lists and makes in 1-d
+    concatenate all the vectors!
     """
     return [x for y in l for x in y]
 
@@ -32,10 +33,6 @@ trumps = flatten(read_corpus("TRUMP/BigT.txt"))
 
 both = chomps + trumps
 
-sub = 15000
-
-split = int(.8 * sub)
-#both = both[0:sub]
 # get the list ready to convert to list of integers to stand in for words
 words = sorted(list(set(both)))
 word_indices = dict((w, i) for i, w in enumerate(words))
@@ -63,26 +60,30 @@ print("X shape --", X.shape)
 print("Y shape --", Y.shape)
 
 print(len(ngrams), "ngrams to do.")
+
+# build the ngrams we use to train the model
+# go through the ngrams and replace each word with its integer index in that
+# dictionary we made earlier
 for i, ng in enumerate(ngrams):
     for j, w in enumerate(ng):
         X[i, j] = word_indices[w]
     Y[i] = word_indices[next_words[i]]
 
-
+# check the shape/value of the data
 print("X --", X.shape)
 print("Y --", Y.shape)
 print("X[0]", X[0])
 print("Y[0]", Y[0])
 
 
-print('Building model...')
+print("Building the model. It will be fabulous, great. No one does it better.")
 model = Sequential()
 
-model.add(Embedding(len(words), 32, input_length=gram_size, mask_zero=True))
+model.add(Embedding(len(words), 32, input_length=gram_size))
 
 model.add(LSTM(32))
 
-model.add(Dense(len(words), activation="sigmoid"))
+model.add(Dense(len(words), activation="softmax"))
 
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
