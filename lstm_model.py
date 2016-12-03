@@ -42,7 +42,7 @@ def vectorize(wl, by_char = False):
             v = []
             for c in w:
                 if c not in char_to_int:
-                    c_ind = len(char_to_int) + 1
+                    c_ind = len(char_to_int)
                     char_to_int[c] = c_ind
                     int_to_char[c_ind] = c
                 v.append(char_to_int[c])
@@ -50,7 +50,7 @@ def vectorize(wl, by_char = False):
             v = []
         else:
             if w not in char_to_int:
-                w_ind = len(char_to_int) + 1
+                w_ind = len(char_to_int) 
                 char_to_int[w] = w_ind
                 int_to_char[w_ind] = w
             vl.append(char_to_int[w])
@@ -71,12 +71,16 @@ def make_one_hot(v, categories):
         new_v[i,j-1] = 1
     return new_v
 
+epochs = 10
+b_size = 128
+subsize = 30000
 
+chomps = read_corpus("CHOMSKY/BigC.txt")
+trumps = read_corpus("TRUMP/BigT.txt")
 
-chomps = flatten(read_corpus("CHOMSKY/BigC.txt"))
-trumps = flatten(read_corpus("TRUMP/BigT.txt"))
+both = flatten(chomps)[0:subsize] + flatten(trumps)[0:subsize]
+#both = flatten(chomps) + flatten(trumps)
 
-both = chomps + trumps
 
 #both = both[0:10000]
 
@@ -87,7 +91,7 @@ words = sorted(list(set(both)))
 
 _, indices_word, word_indices = vectorize(both)
 
-print("#"*20)
+print("#"*40)
 print("Word types in both:", len(words))
 print("Tokens in both:", len(both))
 
@@ -107,8 +111,8 @@ for i in range(0, len(both) - gram_size, step):
 X = np.zeros((len(ngrams), gram_size), dtype="int32")
 Y = np.zeros((len(ngrams), 1), dtype="int32")
 
-print("X shape --", X.shape)
-print("Y shape --", Y.shape)
+#print("X shape --", X.shape)
+#print("Y shape --", Y.shape)
 
 print(len(ngrams), "ngrams to do.")
 
@@ -121,7 +125,7 @@ for i, ng in enumerate(ngrams):
     Y[i] = word_indices[next_words[i]]
 
 ###
-print("#"*20)
+print("#"*40)
 # make the output a one-hot vector for each possible word
 Y = make_one_hot(Y, len(words))
 ###
@@ -131,7 +135,8 @@ Y = make_one_hot(Y, len(words))
 print("X --", X.shape)
 print("Y --", Y.shape)
 
-b_size = 32
+
+print("#"*40)
 print("Building the model. It will be fabulous, great. No one does it better.")
 model = Sequential()
 
@@ -145,41 +150,29 @@ model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']
 
 #print(model.summary())
 print("Fitting....")
-model.fit(X, Y, batch_size=b_size, nb_epoch=3)
+model.fit(X, Y, batch_size=b_size, nb_epoch=epochs)
 
 
-####################################################
-def sample(preds, temperature=1.0):
-    # helper function to sample an index from a probability array
-    preds = np.asarray(preds).astype('float64')
-    preds = np.log(preds) / temperature
-    exp_preds = np.exp(preds)
-    preds = exp_preds / np.sum(exp_preds)
-    probas = np.random.multinomial(1, preds, 1)
-    return np.argmax(probas)
-
-
-start_index = random.randint(0, len(both) - gram_size - 1)
+start_sentence = random.randint(0,50)
 generated = ""
-sentence = both[start_index: start_index + gram_size]
-print(sentence, generated)
+sentence = trumps[start_sentence][0:5]
 
 for w in sentence:
     generated += w + " "
 
 print("Starting with::\n\t", generated)
 # let's generate 20 random words based on the model
-for i in range(3):
+for i in range(15):
     x = np.zeros(5)
     
-    for i, w in enumerate(sentence[-6:-1]):
-        x[i] = word_indices[w]
+    for i, w in enumerate(sentence):
+    	x[i] = word_indices[w]
         
     preds = model.predict(x, verbose=0)
-    preds = np.asarray(preds).astype('float64')
-
-
-    pred_word = indices_word[np.argmax(preds[-1])]
+    best_guesses = [np.argmax(preds[j]) for j in range(5)]
+    
+    pred_word = indices_word[np.argmax(best_guesses)]
+    
     generated += pred_word + " "
     sentence = sentence[1:] + [pred_word]
 
