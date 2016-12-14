@@ -8,7 +8,7 @@ from keras.utils.data_utils import get_file
 from keras.utils.np_utils import to_categorical
 import numpy as np
 import random
-import sys
+import sys, re
 
 
 def read_corpus(infile):
@@ -39,6 +39,24 @@ def count_unigrams(v):
         else:
             rd[w] = 1
     return rd
+
+def delete_char(w_list, chars):
+    """
+    goes through all items in 'w_list' and replaces any instance of a char in 
+    'chars' with ""
+    """
+    reg = ""
+    for c in chars:
+        # because [ and ] mess all regexes up... :/
+        if c not in [']','[']:
+            reg += c
+
+    reg = re.compile("[" + reg + "]")
+    mod_list = []
+    for i, w in enumerate(w_list):
+        w = reg.sub("",w)
+        w_list[i] = w
+    return w_list
 
 def get_top_words(guys_words,both,how_many,threshold=.75):
     """
@@ -96,14 +114,22 @@ def indices_to_string(list_ind, index_dict):
 nb_top_words = 25
 
 # read in the corpora and fold case
-chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:10000]
-trumps = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:10000]
+chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:50000]
+trumps = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:50000]
 
 both = chomps + trumps
+
+# remove low frequency characters from the data - makes the eventual numpy arrays MUCH
+# smaller and easier to play with
+all_chars = count_unigrams(flatten(both))
+low_freq = [c for c in all_chars if all_chars[c] <= 10]
+
+both = delete_char(both, low_freq)
 
 chomps_words = count_unigrams(chomps)
 trumps_words = count_unigrams(trumps)
 both_words = count_unigrams(both)
+
 
 both_top = sorted(both_words, key=lambda v: both_words[v], reverse=True)[:nb_top_words]
 chomps_top = get_top_words(chomps_words, both_words, nb_top_words)
