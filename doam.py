@@ -112,6 +112,7 @@ def indices_to_string(list_ind, index_dict):
     return rs
 
 nb_top_words = 25
+nb_batch = 512
 
 # read in the corpora and fold case
 chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:]
@@ -191,7 +192,7 @@ for iteration in range(1, 40):
     print()
     print('-' * 50)
     print('Iteration', iteration)
-    model.fit(X, y, batch_size=128, nb_epoch=1)
+    model.fit(X, y, batch_size=nb_batch, nb_epoch=1)
 
     start_index = random.randint(0, len(both_indexed) - chunk_size - 1)
     
@@ -213,5 +214,5 @@ for iteration in range(1, 40):
 
     print(indices_to_string(generated,index_lex))    
     with open("test.out.txt", "a") as wf:
-        wf.write(str(i) + "\t" + indices_to_string(generated,index_lex) + "\n")
+        wf.write(str(iteration) + "\t" + indices_to_string(generated,index_lex) + "\n")
     print()
