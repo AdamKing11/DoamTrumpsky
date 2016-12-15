@@ -114,8 +114,9 @@ def indices_to_string(list_ind, index_dict):
 nb_top_words = 25
 
 # read in the corpora and fold case
-chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:50000]
-trumps = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:50000]
+chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:]
+trumps = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:]
+#trumps = [w.lower() for w in flatten(read_corpus("TRUMP/TSpeeches.txt"))][:50000]
 
 both = chomps + trumps
 
