@@ -105,19 +105,31 @@ def make_one_hot(v):
 
 def indices_to_string(list_ind, index_dict):
     """
+    Takes a list of integers and replaces each with a corresponding 
+    string or character from the passed dictionary 
     """
     rs = ""
     for i in list_ind:
         rs += index_dict[i]
     return rs
 
-nb_top_words = 25
+nb_top_words = 15
 nb_batch = 512
 
 # read in the corpora and fold case
-chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:]
-trumps = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:]
-#trumps = [w.lower() for w in flatten(read_corpus("TRUMP/TSpeeches.txt"))][:50000]
+chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:1000]
+trump_tweets = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:1000]
+trump_speech = [w.lower() for w in flatten(read_corpus("TRUMP/TSpeeches.txt"))][:1000]
+
+# for the Trumpster, we're loading in a corpus of his speeches AND tweets
+# put them together and then clear out the variables, to save memory
+trumps = trump_tweets + trump_speech
+trump_tweets = 0
+trump_speech = 0
+
+print("Done loading the data.\nWe have:")
+print("\t", len(chomps), "words for Chomsky.")
+print("\t", len(trumps), "words for Trump.")
 
 both = chomps + trumps
 
@@ -132,7 +144,11 @@ chomps_words = count_unigrams(chomps)
 trumps_words = count_unigrams(trumps)
 both_words = count_unigrams(both)
 
-
+# we're now going to get the TOP words for each of the two speakers...
+# this should add a little more **style**
+# ie if Chomsky says the word "syntax" a lot, we save that thing separately
+# so it gets predicted as a whole word, not as 6 individual letters
+# a way to bring together character-based and word-based generators :)
 both_top = sorted(both_words, key=lambda v: both_words[v], reverse=True)[:nb_top_words]
 chomps_top = get_top_words(chomps_words, both_words, nb_top_words)
 trumps_top = get_top_words(trumps_words, both_words, nb_top_words)
@@ -148,7 +164,9 @@ index_lex = dict((i, l) for i, l in enumerate(lexicon_set))
 # now have list of indices
 both_indexed = repl_with_index(both, lex_index)
 
+# chunk size for how many characters we use BEFORE the target character to predict
 chunk_size = 20
+# step size in order to skip **some** 
 step_size = 5
 
 chunks = []
@@ -193,7 +211,7 @@ for iteration in range(1, 40):
     print('-' * 50)
     print('Iteration', iteration)
     model.fit(X, y, batch_size=nb_batch, nb_epoch=1)
-
+    
     start_index = random.randint(0, len(both_indexed) - chunk_size - 1)
     
     sentence = both_indexed[start_index: start_index + chunk_size]
@@ -216,3 +234,6 @@ for iteration in range(1, 40):
     with open("test.out.txt", "a") as wf:
         wf.write(str(iteration) + "\t" + indices_to_string(generated,index_lex) + "\n")
     print()
+    # save the model
+    model.save("saved/doam_bot.m")
+
