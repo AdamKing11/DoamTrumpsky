@@ -4,8 +4,6 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM, Embedding, Bidirectional
 from keras.optimizers import RMSprop
-from keras.utils.data_utils import get_file
-from keras.utils.np_utils import to_categorical
 import numpy as np
 import random
 import sys, re
@@ -117,9 +115,9 @@ nb_top_words = 15
 nb_batch = 512
 
 # read in the corpora and fold case
-chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:1000]
-trump_tweets = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:1000]
-trump_speech = [w.lower() for w in flatten(read_corpus("TRUMP/TSpeeches.txt"))][:1000]
+chomps = [w.lower() for w in flatten(read_corpus("CHOMSKY/BigC.txt"))][:10000]
+trump_tweets = [w.lower() for w in flatten(read_corpus("TRUMP/BigT.txt"))][:5000]
+trump_speech = [w.lower() for w in flatten(read_corpus("TRUMP/TSpeeches.txt"))][:5000]
 
 # for the Trumpster, we're loading in a corpus of his speeches AND tweets
 # put them together and then clear out the variables, to save memory
