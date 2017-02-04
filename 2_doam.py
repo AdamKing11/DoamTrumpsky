@@ -52,11 +52,11 @@ def flatten(l):
 def ngram_freq(ngrams):
     return dict((n,ngrams.count(n)) for n in set(ngrams))
 
-n_size = 1
+n_size = 2
 chom = read_corpus("CHOMSKY/cleaned_all.txt", n_size)
 
 
-fchom = flatten(chom)[:10000]
+fchom = flatten(chom)#[:10000]
 fchom_ngrams = set(fchom)
 
 print(len(chom))
@@ -97,26 +97,27 @@ for i, slc in enumerate(slices):
 
 # free up some more memory.....
 slices = []
-
+file_name = "saved/" + str(n_size) +"doamdoam.mod"
 print("Ivana!")
 
 doam = Sequential()
 
-doam.add(LSTM(64,input_shape=(slice_size,len(nti))))
+doam.add(LSTM(128,input_shape=(slice_size,len(nti))))
 doam.add(Dense(len(nti), activation="softmax"))
 
 doam.compile(loss="categorical_crossentropy", optimizer="adam")
 
-doam.fit(X, y, batch_size=128, nb_epoch=1)
 
-doam.save("saved/doamdoam.mod")
+doam.save(file_name)
 
 """
 print("loadinggg")
-doam = load_model("saved/doamdoam.mod")
+doam = load_model(file_name)
 """
+doam.fit(X, y, batch_size=128, nb_epoch=10)
 
-prediction_base = ngram_chars("endorsed MittRomney not becaus", n_size, clean=False)
+
+prediction_base = ngram_chars("endorsed @MittRomney not becau", n_size, clean=False)
 #prediction_base = ngram_chars("endorsed @MittRomney not becau", 1, clean=False)
 
 for i in range(20):
