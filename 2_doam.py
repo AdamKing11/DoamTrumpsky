@@ -1,7 +1,11 @@
+#-*- coding: utf-8 -*-
+from __future__ import print_function
+
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM, Embedding, Bidirectional
 from keras.optimizers import RMSprop
+from keras.models import load_model
 import numpy as np
 import random
 import sys, re
@@ -20,18 +24,22 @@ def read_corpus(infile, n = 2):
             c.append(ngrams)
     return c
 
-def ngram_chars(s, n = 2):
+def ngram_chars(s, n = 2, clean = True):
     """
     takes a string and breaks in down into ngrams over characters
     just like C. Shannon would've wanted.... :'(
     """
-    chars_to_clean = "~@©®¢¥%„°$­£€«■·|}_{<^!Q?\>►±&»\§/\\•\*\(\):;\[\]=+—"
+    chars_to_clean = u'~©®¢¥%„°$­£€«■·|}_{<^!Q?\>►±&»\§/\\•\*\(\):;\[\]=+—'.encode("utf-8")    
     chars_to_clean = "[" + chars_to_clean + "]"
     ngrams = []
-    s = re.sub(chars_to_clean, "", s)
+    if clean:
+        s = re.sub(chars_to_clean, "", s)
+    
     for i in range(len(s)-n+1):
         ngrams.append(s[i:i+n])
-    ngrams = [n for n in ngrams if not re.search("([a-z][A-Z]|[A-Za-z][0-9]|[0-9][A-Za-z])",n)]
+    
+    if clean:
+        ngrams = [n for n in ngrams if not re.search("([a-z][A-Z]|[A-Za-z][0-9]|[0-9][A-Za-z])",n)]
     return ngrams
 
 def flatten(l):
@@ -44,30 +52,25 @@ def flatten(l):
 def ngram_freq(ngrams):
     return dict((n,ngrams.count(n)) for n in set(ngrams))
 
-chom = read_corpus("CHOMSKY/cleaned_all.txt", 1)
-#for i in chom:
-#    for j in i:
-#        print(j)
+n_size = 1
+chom = read_corpus("CHOMSKY/cleaned_all.txt", n_size)
 
 
-fchom = flatten(chom)
+fchom = flatten(chom)[:10000]
 fchom_ngrams = set(fchom)
 
 print(len(chom))
 print(len(fchom))
 print(len(fchom_ngrams))
 
-#fchom_freq = ngram_freq(fchom)
-#for i in sorted(fchom_freq, key=fchom_freq.get, reverse=True):
-#    print(i, fchom_freq[i])
 
 # index to ngram
 itn = dict((x,y) for x,y in enumerate(fchom_ngrams)) 
 # ngram to index
 nti = dict((y,x) for x,y in enumerate(fchom_ngrams)) 
 
-slice_size = 20
-slice_step = 10
+slice_size = 30
+slice_step = 20
 slice_count = int((len(fchom)-slice_size)/slice_step)+1
 slices = np.zeros((slice_count,slice_size+1), dtype="int16")
 j = 0
@@ -95,6 +98,8 @@ for i, slc in enumerate(slices):
 # free up some more memory.....
 slices = []
 
+print("Ivana!")
+
 doam = Sequential()
 
 doam.add(LSTM(64,input_shape=(slice_size,len(nti))))
@@ -103,3 +108,35 @@ doam.add(Dense(len(nti), activation="softmax"))
 doam.compile(loss="categorical_crossentropy", optimizer="adam")
 
 doam.fit(X, y, batch_size=128, nb_epoch=1)
+
+doam.save("saved/doamdoam.mod")
+
+"""
+print("loadinggg")
+doam = load_model("saved/doamdoam.mod")
+"""
+
+prediction_base = ngram_chars("endorsed MittRomney not becaus", n_size, clean=False)
+#prediction_base = ngram_chars("endorsed @MittRomney not becau", 1, clean=False)
+
+for i in range(20):
+    # take our sting of ngrams and make them into 
+    P = np.zeros((1,slice_size, len(nti)))
+    for i, n in enumerate(prediction_base):
+        P[0,i] = np.zeros(len(nti))
+        P[0,i,nti[n]] = 1
+    # gives back vector of length = (number of char ngrams) with probabilities
+    # for each
+    predictions = doam.predict(P,verbose = 0)
+
+    predictions = predictions[0]
+    predictions = np.asarray(predictions).astype('float64')
+    predictions = np.log(predictions)
+    predictions = np.exp(predictions) / sum(np.exp(predictions))
+
+    next = np.argmax(np.random.multinomial(1,predictions,1))
+    
+    prediction_base = prediction_base[1:] + [itn[next]]
+
+print("".join(prediction_base))
+
