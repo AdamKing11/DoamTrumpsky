@@ -1,7 +1,10 @@
+from __future__ import print_function
+
 from NPhoner import NPhoner
 from DoamPrePros import DoamPrePros
 import numpy, re, pickle
 
+from keras.models import load_model
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM, Embedding, Bidirectional
@@ -18,15 +21,17 @@ def make_prediction(model, little_X):
     return next_index
 
 
-d = NPhoner('cat.Trump.txt', load=False)
+d = NPhoner("cleaned_all.txt", load=False, max_nphone = 1)
 phones = d.get_nphones()
 
-dpp = DoamPrePros(phones, raw_file = "cat.Trump.txt", chunk = 30)
+dpp = DoamPrePros(phones, raw_file = "cleaned_all.txt", chunk = 30)
 
 (X, y) = dpp.X_y()
 
 print(X.shape)
 print(y.shape)
+
+print(dpp.nb_phones())
 
 gen = dpp.get_random_string()
 gen_ind = dpp.list_to_indeces(gen)
