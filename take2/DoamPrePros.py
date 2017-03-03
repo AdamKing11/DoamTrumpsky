@@ -137,3 +137,6 @@ class DoamPrePros:
 
 	def list_to_chars(self, l):
 		return [self.index_char[c] for c in l]
+
+	def nb_phones(self):
+		return len(self.phones)
