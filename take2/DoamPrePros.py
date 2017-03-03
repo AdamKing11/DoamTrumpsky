@@ -57,11 +57,10 @@ class DoamPrePros:
 						p = temp_p
 				char_X[-1].extend(p)
 
-			i += len(char_X[-1])
 			## build y
 			p = ''
 			for j in range(1,max_nphone+1):
-				temp_p = ''.join(raw[i:i+j])
+				temp_p = ''.join(raw[i+len(char_X[-1]):i+j+len(char_X[-1])])
 				if temp_p in self.phones:
 					p = temp_p
 			char_y.append([p])
@@ -76,12 +75,16 @@ class DoamPrePros:
 		# we use the dictionary we made earlier where we mapped an nphone to a unique
 		# integer to look up which index in the big matrix we set to 1
 		for i in range(X.shape[0]):
-			for j in range(chunk):
-				ind = self.char_index[char_X[i][j]]
-				X[i,j,ind] = 1
+			try:
+				for j in range(chunk):
+					c = char_X[i][j]
+					ind = self.char_index[c]
+					X[i,j,ind] = 1
 			# put the 1 in the correct spot for the y vector
-			ind = self.char_index[char_y[i][0]]
-			y[i,ind] = 1
+				ind = self.char_index[char_y[i][0]]
+				y[i,ind] = 1
+			except:
+				pass
 
 		return X, y
 
@@ -121,6 +124,13 @@ class DoamPrePros:
 			i+= len(p)
 
 		return rand_str
+
+	def list_to_onehot(self, l):
+		little_X = numpy.zeros((1, self.X.shape[1], self.X.shape[2]), dtype='int8')
+
+		for i in range(self.X.shape[1]):
+			little_X[0,i, l[i]] = 1
+		return little_X
 
 	def list_to_indeces(self, l):
 		return [self.char_index[i] for i in l]
