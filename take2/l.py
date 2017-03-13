@@ -2,6 +2,7 @@
 #from DoamPrePros import DoamPrePros
 import numpy, re, pickle
 
+from keras.models import load_model
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 from keras.layers import LSTM, Embedding, Bidirectional
@@ -27,6 +28,7 @@ class DHPrePros:
 				raw = raw.lower()
 			if self.w_only:
 				raw = re.sub("[^\w@#' ]", "", raw)
+
 		return raw
 
 	def _build_phones(self, raw_text):
@@ -80,13 +82,23 @@ class DHPrePros:
 	def get_phones(self):
 		return self.phones
 
+	def get_ind_char(self, i):
+		return self.index_char[i]
+
 	def vec_ind_char(self, l):
 		chars = [self.index_char[i] for i in l]
 		return chars
 
 	def vec_char_ind(self, l):
 		indexs = [self.char_index[c] for c in l]
-		return chars
+		return indexs
+
+	def vec_ind_onehot(self, l, vec_size):
+		little_X = numpy.zeros((1, len(l), vec_size), dtype='int8')
+
+		for i, j in enumerate(l):
+			little_X[0,i, j] = 1
+		return little_X
 
 	def get_random_string(self, raw_file, chunk):
 		raw = self.load_text(raw_file)
@@ -100,8 +112,11 @@ class DHPrePros:
 
 class haikuModel:
 
-	def __init__(self, X_shape, y_shape, hidden_size = 128):
-		self.model = self._build_lstm(X_shape, y_shape, hidden_size)
+	def __init__(self, X_shape, y_shape, hidden_size = 128, load = False, file_name="haikuDon.model"):
+		if not load:
+			self.model = self._build_lstm(X_shape, y_shape, hidden_size)
+		else:
+			self.load(file_name)
 
 	def _build_lstm(self, Xs, ys, h):
 		model = Sequential()
@@ -114,7 +129,13 @@ class haikuModel:
 		return model
 
 	def train(self, X, y, batch = 128, epochs = 1):
-		self.model.fit(X, y, batch_size = batch, nb_epoch = epochs)
+		self.model.fit(X, y, batch_size = batch, nb_epoch = epochs, verbose = 1)
+
+	def save(self, file_name = "haikuDon.model"):
+		self.model.save(file_name)
+
+	def load(self, file_name = "haikuDon.model"):
+		self.model = load_model(file_name)
 
 	def get_model(self):
 		return self.model
@@ -123,13 +144,17 @@ class haikuModel:
 
 def softmax(x):
     e_x = numpy.exp(x - numpy.max(x))
-    return e_x / e_x.sum()
+    return e_x / numpy.sum(e_x)
 
 def make_prediction(model, little_X):
     predictions = model.predict(little_X, verbose=0)[0]
     predictions = numpy.log(predictions)
     predictions = softmax(predictions)
-    next_index = numpy.argmax(numpy.random.multinomial(1,predictions,1))
+    try:
+    	next_index = numpy.argmax(numpy.random.multinomial(1,predictions,1))
+    except:
+   		predictions = softmax(predictions)
+   		next_index = numpy.argmax(numpy.random.multinomial(1,predictions,1))
     return next_index
 
 
@@ -139,8 +164,9 @@ phones = d.get_phones()
 (X, y) = d.build_Xy("BigT.txt")
 
 
-for p in sorted(phones):
-	print(p)
+#for p in sorted(phones):
+#	print(p)
+#
 
 print()
 print(len(phones))
@@ -149,7 +175,34 @@ print(len(phones))
 print(X.shape)
 print(y.shape)
 
-print(d.get_random_string("BigT.txt", 20))
+gen = d.get_random_string("BigT.txt", 20)
+gen_ind = d.vec_char_ind(gen)
+gen_onehot = d.vec_ind_onehot(gen_ind, len(phones))
 
-haiku = haikuModel(X.shape, y.shape)
-haiku.train(X,y)
+print("Building model")
+haiku = haikuModel(X.shape, y.shape, load = True, file_name = "haikuDon.model")
+#haiku.load("haikuDon.model")
+print("training model")
+
+
+
+for epoch in range(30):
+	print("*"*80)
+	print("Epoch", epoch)
+	#haiku.train(X,y)
+	haiku.save("haikuDon.model")
+
+	print("Starting with:")
+	print(gen)
+	print("-"*80)
+	print(gen, end = '')
+
+	for i in range(60):
+		next_index = make_prediction(haiku.get_model(), gen_onehot)
+		#next_index = numpy.random.randint(0,100)
+		print(d.get_ind_char(next_index), end = '')
+		
+		gen_ind = gen_ind[1:]
+		gen_ind.append(next_index)
+		gen_onehot = d.vec_ind_onehot(gen_ind, len(phones))
+	haiku.train(X,y)
